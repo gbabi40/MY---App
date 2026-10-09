@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#176b57">
+<title>Mi Gran YO</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f4;font-family:Arial,sans-serif;color:#24332e}
+header{background:#176b57;color:white;padding:35px 20px;text-align:center}
+header h1{margin:0;font-size:32px}
+header p{margin:8px 0 0}
+main{padding:18px;max-width:650px;margin:auto}
+nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{border:0;border-radius:14px;padding:15px;font-size:16px;cursor:pointer}
+nav button{background:white;color:#176b57;font-weight:bold}
+nav button.active{background:#176b57;color:white}
+.card{background:white;border-radius:18px;padding:18px;margin-top:18px;box-shadow:0 2px 8px #0000000b}
+input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:10px;font-size:16px}
+label{display:block;margin-top:10px;font-weight:bold}
+.primary{background:#176b57;color:white;width:100%;margin-top:15px}
+.voice{background:#e1eee8;color:#176b57;width:100%;margin-top:8px}
+.item{border-bottom:1px solid #eee;padding:13px 0}
+.item:last-child{border:0}
+.item small{display:block;color:#667;margin-top:6px}
+.delete{background:#fbe7e7;color:#a33;padding:8px;margin-top:8px}
+.empty{color:#777;text-align:center}
+</style>
+</head>
+<body>
+<header>
+<h1>Mi Gran YO</h1>
+<p>Tu vida, tus tiempos, tu organización 💚</p>
+</header>
+<main>
+<nav>
+<button onclick="section('Hijos',this)">👨‍👩‍👧‍👦 Hijos</button>
+<button onclick="section('Laboral',this)">💼 Laboral</button>
+<button onclick="section('Personal',this)">💚 Personal</button>
+<button onclick="section('Compras',this)">🛒 Compras</button>
+</nav>
+
+<div class="card">
+<h2 id="heading">Mis pendientes</h2>
+<label>¿Para quién o qué área?</label>
+<select id="area">
+<option>Santi</option>
+<option>Joaco</option>
+<option>Inda</option>
+<option>Pampero</option>
+<option>Focus</option>
+<option>Psico</option>
+<option>Personal</option>
+<option>Compras</option>
+</select>
+<label>Actividad o pendiente</label>
+<input id="task" placeholder="Ej: Turno médico, reunión, comprar...">
+<button class="voice" onclick="dictate()">🎤 Dictar por voz</button>
+<label>Fecha y hora</label>
+<input id="date" type="datetime-local">
+<button class="primary" onclick="save()">+ Guardar pendiente</button>
+<p style="font-size:13px;color:#777">Recordatorio deseado: 1 hora antes. Las notificaciones automáticas se incorporarán en una próxima versión.</p>
+</div>
+
+<div class="card">
+<h2>Mi agenda</h2>
+<div id="items"></div>
+</div>
+</main>
+<script>
+let current="Todos";
+let tasks=[];
+try{
+tasks=JSON.parse(localStorage.getItem("my_tasks")||"[]");
+if(!Array.isArray(tasks))tasks=[];
+}catch(e){tasks=[]}
+
+const groups={
+Hijos:["Santi","Joaco","Inda"],
+Laboral:["Pampero","Focus","Psico"],
+Personal:["Personal"],
+Compras:["Compras"]
+};
+
+function section(name,button){
+current=name;
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+button.classList.add("active");
+document.getElementById("heading").textContent=name;
+document.getElementById("area").value=groups[name][0];
+render();
+}
+
+function save(){
+const text=document.getElementById("task").value.trim();
+const date=document.getElementById("date").value;
+const area=document.getElementById("area").value;
+if(!text){alert("Escribí una actividad");return}
+tasks.push({id:Date.now()+Math.random(),text,date,area});
+localStorage.setItem("my_tasks",JSON.stringify(tasks));
+document.getElementById("task").value="";
+document.getElementById("date").value="";
+render();
+}
+
+function removeTask(id){
+tasks=tasks.filter(t=>t.id!==id);
+localStorage.setItem("my_tasks",JSON.stringify(tasks));
+render();
+}
+
+function render(){
+const box=document.getElementById("items");
+box.replaceChildren();
+const filtered=tasks.filter(t=>current==="Todos"||groups[current].includes(t.area))
+.sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999"));
+if(!filtered.length){
+const p=document.createElement("p");
+p.className="empty";
+p.textContent="Todavía no hay pendientes.";
+box.appendChild(p);
+return;
+}
+filtered.forEach(t=>{
+const div=document.createElement("div");
+div.className="item";
+const strong=document.createElement("strong");
+strong.textContent=t.text;
+const small=document.createElement("small");
+small.textContent=t.area+" · "+(t.date?new Date(t.date).toLocaleString("es-AR"):"Sin fecha");
+const btn=document.createElement("button");
+btn.className="delete";
+btn.textContent="Eliminar";
+btn.onclick=()=>removeTask(t.id);
+div.append(strong,small,btn);
+box.appendChild(div);
+});
+}
+
+function dictate(){
+const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!Speech){
+alert("El dictado no está disponible en este navegador. Podés usar el micrófono del teclado del iPhone.");
+return;
+}
+const recognition=new Speech();
+recognition.lang="es-AR";
+recognition.onresult=e=>{
+document.getElementById("task").value=e.results[0][0].transcript;
+};
+recognition.onerror=()=>alert("No se pudo utilizar el micrófono.");
+recognition.start();
+}
+render();
+</script>
+</body>
+</html>
